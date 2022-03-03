@@ -1,32 +1,26 @@
-import math
-import os
-
 from reportlab.lib.fonts import addMapping
 from reportlab.pdfbase import pdfmetrics
 from reportlab.pdfbase.ttfonts import TTFont
 import pytesseract
-from PyPDF2 import PdfFileReader, PdfFileWriter
-from reportlab.lib import colors
-from wand.color import Color
 
 from src.functions import *
 
 if __name__ == "__main__":
     input_file = "./input/210807_A8L01.pdf"
-    out_path = "./bin/"
+    out_path = "./output/"
     dir, tmp = os.path.split(input_file)
     ext = tmp.split('.')[-1]
     filename = tmp.replace('.%s' % ext, '')
     out_filename = os.path.join(out_path, filename + "_J.pdf")
 
-    pdfmetrics.registerFont(TTFont('Arial', 'arial07.ttf'))
+    pdfmetrics.registerFont(TTFont('Arial', './fonts/arial07.ttf'))
     addMapping('Arial', 0, 0, 'Arial')
     pytesseract.pytesseract.tesseract_cmd = r'C:\Program Files\Tesseract-OCR\tesseract.exe'
     tesseract_config = r"""-c tessedit_char_whitelist=0123456789ABCDEGHIJKLMNPRSW/-"""
 
     out_pdf = PdfFileWriter()
     src_pdf = PdfFileReader(open(input_file, 'rb'), strict=False)
-    numpage = len(src_pdf.pages)
+    num_page = len(src_pdf.pages)
     for i, pg in enumerate(src_pdf.pages):
         cur_pg = pg
         dst_pdf = PdfFileWriter()
@@ -73,7 +67,7 @@ if __name__ == "__main__":
         else:
             pass
         out_pdf.addPage(cur_pg)
-        print("页面 %i / %i 输出.." % (i, numpage))
+        print("页面 %i / %i 输出.." % (i, num_page))
     with open(out_filename, 'wb') as f:
         out_pdf.write(f)
     pass

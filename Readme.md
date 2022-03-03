@@ -17,18 +17,12 @@
 ----------
 
 - 一个基于PyCharm的Python项目结构；
-
 - 的第三方 **Packages** 和 **Modules** 的安装和导入；
-
 - 自定义Modules的导入；
-
 - 运行和调试；
-
 - 函数和类的定义；
-
 - 相对路径；
-
-  
+- PDF格式的基础概念；
 
 ### 安装必要的Package
 
@@ -45,140 +39,98 @@
 - Wand
 - numpy
 - Pillow
-- 
+- pytesseract
+
+### 安装必要的程序
+
+------------------------
+
+- **[Ghostscript](https://github.com/ArtifexSoftware/ghostpdl-downloads/releases/download/gs9550/gs9550w32.exe)**
+
+用于
+
+- **[tesseract](https://digi.bib.uni-mannheim.de/tesseract/tesseract-ocr-w64-setup-v5.0.1.20220118.exe)**
+
+图像识别
+
+- **[ImageMagick](https://download.imagemagick.org/ImageMagick/download/binaries/ImageMagick-7.1.0-26-Q16-HDRI-x64-dll.exe)**
+
+图片相关功能
 
 
 
+### 两个示例项目
+
+-----------
+
+#### YN项目日期和签名水印
+
+YN项目竣工图水印需要把已经制作好的水印文件叠加到已有图纸上，添加人员签名，并修改日期。
 
 
-Install latest development version with pip from GitHub:
+#### KNY项目竣工图水印
 
-- The `drawing` add-on is a translation layer to send DXF data to a render backend, interfaces to 
-  [matplotlib](https://pypi.org/project/matplotlib/), which can export images as png, pdf or svg, 
-  and [PyQt5](https://pypi.org/project/PyQt5/) are implemented.
-- `r12writer` add-on to write basic DXF entities direct and fast into a DXF R12 file or stream
-- `iterdxf` add-on to iterate over DXF entities of the modelspace of really big (> 5GB) DXF files which
-  do not fit into memory
-- `Importer` add-on to import entities, blocks and table entries from another DXF document
-- `dxf2code` add-on to generate Python code for DXF structures loaded from DXF 
-  documents as starting point for parametric DXF entity creation
-- Plot Style Files (CTB/STB) read/write add-on
+KNY项目竣工图水印工作需要识别图册中哪些页面带有图框，对于又图框的页面，需要识别图号，并根据原图号生成一个新图号（原图号后加字符  'J'）的水印，加盖于原图号位置，实现方式分解为**4**步：
 
-A simple example:
+1. 判断是否是图号位置：判断局部区域是否存在颜色，**Wand** 包；
+2. 文字识别：图像识别包 **pytesseract**；
+3. 生成图号水印文件：pdf生成包 **reportlab**；
+4. 水印叠加：**PyPDF2** 包；
+
+
+
+### 部分函数功能
+
+---------
+
+- 添加水印
+
 
 ```python
-import ezdxf
-
-# Create a new DXF document.
-doc = ezdxf.new(dxfversion='R2010')
-
-# Create new table entries (layers, linetypes, text styles, ...).
-doc.layers.new('TEXTLAYER', dxfattribs={'color': 2})
-
-# DXF entities (LINE, TEXT, ...) reside in a layout (modelspace, 
-# paperspace layout or block definition).  
-msp = doc.modelspace()
-
-# Add entities to a layout by factory methods: layout.add_...() 
-msp.add_line((0, 0), (10, 0), dxfattribs={'color': 7})
-msp.add_text(
-    'Test', 
-    dxfattribs={
-        'layer': 'TEXTLAYER'
-    }).set_pos((0, 0.2), align='CENTER')
-
-# Save DXF document.
-doc.saveas('test.dxf')
+def create_watermark(content):
+    """水印信息"""
+    # 默认大小为21cm*29.7cm
+    file_name = "./data/mark.pdf"
+    c = canvas.Canvas(file_name, pagesize=(42 * cm, 29.7 * cm))
+    # 移动坐标原点(坐标系左下为(0,0))
+    # c.translate( * cm, 5 * cm)
+    # 设置字体
+    c.setFont("Arial", 11.6)
+    # 画几个文本,注意坐标系旋转的影响
+    # c.drawString((35+41)*0.5*cm,29.7*cm, content)
+    c.setFillColorRGB(1, 1, 1)
+    c.rect((35 + 0.5) * cm, (1.75 + 0.12) * cm, 5 * cm, 0.49 * cm, fill=1, stroke=0)
+    c.rect((35 + 0.5) * cm, (1.0 + 0.2) * cm, 5 * cm, 0.49 * cm, fill=1, stroke=0)
+    c.setFillColorRGB(0, 0, 0)
+    # c.drawString(38 * cm, 2.125 * cm, content)
+    c.drawCentredString(38 * cm, 2.035 * cm, content, charSpace=1)
+    c.drawCentredString(38 * cm, 1.275 * cm, "DEC. 2021", charSpace=1)
+    # 关闭并保存pdf文件
+    c.save()
+    return file_name
 ```
 
-Example for the *r12writer*, which writes a simple DXF R12 file without in-memory structures:
+- 计算一个区域的平均蓝
 
 ```python
-from random import random
-from ezdxf.addons import r12writer
-
-MAX_X_COORD = 1000
-MAX_Y_COORD = 1000
-
-with r12writer("many_circles.dxf") as doc:
-    for _ in range(100000):
-        doc.add_circle((MAX_X_COORD*random(), MAX_Y_COORD*random()), radius=2)
+def average_blue(img: 'Image', x0: int, y0: int, w: int, h: int) -> float:
+    mat = []
+    for j in range(h):
+        line = []
+        for i in range(w):
+            line.append(img[x0 + i, y0 + j].blue_int8)
+        mat.append(line)
+    men = np.array(mat).mean()
+    if img.colorspace == 'cmyk':
+        ret = 255 - men
+    else:
+        ret = men
+    return ret
 ```
 
-The r12writer supports only the ENTITIES section of a DXF R12 drawing, no HEADER, TABLES or BLOCKS section is
-present, except FIXED-TABLES are written, than some additional predefined text styles and line types are available.
+- 文本识别
 
-安装依赖程序
-------------
-
-Install with pip for Python 3.6 and later:
-
-    pip install ezdxf
-
-Install latest development version with pip from GitHub:
-
-    pip install git+https://github.com/mozman/ezdxf.git@master
-
-or from source:
-
-    python setup.py install
-
-Website
--------
-
-https://ezdxf.mozman.at/
-
-Documentation
--------------
-
-Documentation of development version at https://ezdxf.mozman.at/docs
-
-Documentation of latest release at http://ezdxf.readthedocs.io/
-
-Contribution
-------------
-
-The source code of *ezdxf* can be found at __GitHub__, target your pull requests to the `master` branch:
-
-http://github.com/mozman/ezdxf.git
-
-
-Feedback
---------
-
-Questions and feedback at __Google Groups__:
-
-https://groups.google.com/d/forum/python-ezdxf
-
-python-ezdxf@googlegroups.com
-
-Questions at __Stack Overflow__:
-
-Post questions at [stack overflow](https://stackoverflow.com/) and use the tag `dxf` or `ezdxf`.
-
-Issue tracker at __GitHub__:
-
-http://github.com/mozman/ezdxf/issues
-
-Contact
--------
-
-Please post questions at the [forum](https://groups.google.com/d/forum/python-ezdxf) or 
-[stack overflow](https://stackoverflow.com/) to make answers available to other users as well.
-
-ezdxf@mozman.at
-
-Feedback is greatly appreciated.
-
-Manfred
-
-
-
-安装必要的程序：
-
-**[Ghostscript](https://github.com/ArtifexSoftware/ghostpdl-downloads/releases/download/gs9550/gs9550w32.exe)**、**[tesseract](https://digi.bib.uni-mannheim.de/tesseract/tesseract-ocr-w64-setup-v5.0.1.20220118.exe)**、**[ImageMagick](https://download.imagemagick.org/ImageMagick/download/binaries/ImageMagick-7.1.0-26-Q16-HDRI-x64-dll.exe)**
-
-
-
-
-
+```python
+ret = cut(img, 1660, 1290, 270, 25)
+s = pytesseract.image_to_string(ret, config=tesseract_config)
+```
