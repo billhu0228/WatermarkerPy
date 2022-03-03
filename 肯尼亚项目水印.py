@@ -9,13 +9,12 @@ from PyPDF2 import PdfFileReader, PdfFileWriter
 from reportlab.lib import colors
 from wand.color import Color
 
-from PDFMerger import AddWaterMarker
-from Functions import *
+from src.functions import *
 
 if __name__ == "__main__":
-    inputfile = "./input/SECTION2 VOL.3 - BOOK 3 -FOUNDATION TYPICAL DRAWING-竣工图.pdf"
+    input_file = "./input/210807_A8L01.pdf"
     out_path = "./bin/"
-    dir, tmp = os.path.split(inputfile)
+    dir, tmp = os.path.split(input_file)
     ext = tmp.split('.')[-1]
     filename = tmp.replace('.%s' % ext, '')
     out_filename = os.path.join(out_path, filename + "_J.pdf")
@@ -26,7 +25,7 @@ if __name__ == "__main__":
     tesseract_config = r"""-c tessedit_char_whitelist=0123456789ABCDEGHIJKLMNPRSW/-"""
 
     out_pdf = PdfFileWriter()
-    src_pdf = PdfFileReader(open(inputfile, 'rb'), strict=False)
+    src_pdf = PdfFileReader(open(input_file, 'rb'), strict=False)
     numpage = len(src_pdf.pages)
     for i, pg in enumerate(src_pdf.pages):
         cur_pg = pg
