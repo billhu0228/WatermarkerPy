@@ -47,7 +47,7 @@
 
 - **[Ghostscript](https://github.com/ArtifexSoftware/ghostpdl-downloads/releases/download/gs9550/gs9550w32.exe)**
 
-用于
+用于图像处理
 
 - **[tesseract](https://digi.bib.uni-mannheim.de/tesseract/tesseract-ocr-w64-setup-v5.0.1.20220118.exe)**
 
